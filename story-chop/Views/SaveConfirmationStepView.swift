@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SaveConfirmationStepView: View {
     let onDone: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    
     var body: some View {
         VStack(spacing: 32) {
             Image(systemName: "checkmark.seal.fill")
@@ -13,8 +15,9 @@ struct SaveConfirmationStepView: View {
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
             Button(action: {
-                print("[DEBUG] Done tapped")
+                print("[DEBUG] Done tapped - dismissing modal and returning to Home")
                 onDone()
+                dismiss() // Dismiss the entire modal flow
             }) {
                 Text("Done")
                     .fontWeight(.semibold)

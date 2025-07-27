@@ -15,24 +15,35 @@ struct ContentView: View {
     
     // State to control the modal presentation for 'Start New Story'
     @State private var showNewStoryModal = false
+    // State to control tab selection
+    @State private var selectedTab = 0
     
     var body: some View {
-        TabView {
-            HomeView(showNewStoryModal: $showNewStoryModal)
+        TabView(selection: $selectedTab) {
+            HomeView(showNewStoryModal: $showNewStoryModal, selectedTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "house.fill") // Intuitive SF Symbol for Home
                     Text("Home")
                 }
+                .tag(0)
             PromptsView()
                 .tabItem {
                     Image(systemName: "lightbulb.fill") // Intuitive SF Symbol for Prompts
                     Text("Prompts")
                 }
+                .tag(1)
+            AllStoriesView()
+                .tabItem {
+                    Image(systemName: "list.bullet") // SF Symbol for All Stories
+                    Text("All Stories")
+                }
+                .tag(2)
             SettingsView()
                 .tabItem {
                     Image(systemName: "gearshape.fill") // Intuitive SF Symbol for Settings
                     Text("Settings")
                 }
+                .tag(3)
         }
         // Debug log for tab selection
         .onAppear {

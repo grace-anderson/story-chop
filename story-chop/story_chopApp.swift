@@ -14,7 +14,8 @@ struct story_chopApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Prompt.self,
-            PromptCategory.self
+            PromptCategory.self,
+            Story.self
         ])
         let container = try! ModelContainer(for: schema)
         return container

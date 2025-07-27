@@ -93,18 +93,22 @@ Help the user choose a meaningful prompt to guide their story.
 
 ---
 
-## 3. Recording Archive (Story List)
+## 3. Recording Archive (All Stories (story list))
 
 ### 3.1 Purpose
 Display all saved stories with playback and metadata.
 
 ### 3.2 Screens Involved
 - Home Screen
-- Story Detail Screen
+- "All Stories" screen - new screen - add to tab navigation between Prompts and Settings (use appropriate icon)
+- Story Detail modal
+-- the Story Detail modal uses the recording's heading as the heading on the modal.
 
 ### 3.3 User Flow
-1. View archive list on Home.
-2. Tap a story to view its details.
+1. View archive list on Home. 
+- The five most recent stories are listed on the Home
+- Tap "View all" button to right of "Recent stories" to open "All stories"
+2. Tap a story to view its details in the Story Detail modal
 
 ### 3.4 Implementation Details
 - Fetch and display recordings ordered by date (descending).
