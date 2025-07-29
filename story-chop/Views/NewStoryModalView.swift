@@ -203,16 +203,7 @@ struct NewStoryModalView: View {
     }
 }
 
-// Audio Recorder Delegate
-class AudioRecorderDelegate: NSObject, AVAudioRecorderDelegate {
-    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-        print("[DEBUG] Audio recording finished - success: \(flag)")
-    }
-    
-    func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
-        print("[DEBUG] Audio recording encode error: \(error?.localizedDescription ?? "unknown error")")
-    }
-}
+
 
 #Preview {
     NewStoryModalView()
