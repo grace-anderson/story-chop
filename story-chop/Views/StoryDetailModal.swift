@@ -4,62 +4,96 @@ import AVFoundation
 struct StoryDetailModal: View {
     let story: Story
     @Environment(\.dismiss) private var dismiss
+    
+    // Audio playback state
     @State private var audioPlayer: AVAudioPlayer?
+    @State private var audioPlayerDelegate: AudioPlayerDelegate?
     @State private var isPlaying = false
     @State private var currentTime: TimeInterval = 0
     @State private var timer: Timer?
+    @State private var isPlayButtonEnabled = true
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
-                // Debug info
+                // Debug info section (can be removed later)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Story Title: \(story.title)")
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                    Text("Debug Info:")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Text("Title: \(story.title)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                     Text("Prompt: \(story.prompt)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .font(.caption)
+                        .foregroundColor(.gray)
                     Text("Duration: \(formatDuration(story.duration))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
+                    Text("File Path: \(story.filePath)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
                 .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(10)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
                 
-                // Story metadata
-                VStack(alignment: .leading, spacing: 12) {
+                // Story content
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Prompt:")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
                     Text(story.prompt)
-                        .font(.title3)
-                        .italic()
+                        .font(.body)
                         .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                     
                     HStack {
-                        Label {
-                            Text(story.date, style: .date)
-                        } icon: {
-                            Image(systemName: "calendar")
-                        }
+                        Label("Recorded \(formatDate(story.date))", systemImage: "calendar")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         Spacer()
-                        Label {
-                            Text(formatDuration(story.duration))
-                        } icon: {
-                            Image(systemName: "clock")
-                        }
+                        Label("Duration: \(formatDuration(story.duration))", systemImage: "clock")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
                 }
                 
-                // Playback controls
+                // Audio playback controls
                 VStack(spacing: 16) {
-                    // Progress bar
+                    // Play/Pause button
+                    Button(action: {
+                        if isPlaying {
+                            pauseAudio()
+                        } else {
+                            playAudio()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                .font(.title2)
+                            Text(isPlaying ? "Pause" : "Play")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isPlayButtonEnabled ? Color.accentColor : Color.gray)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+                    .disabled(!isPlayButtonEnabled)
+                    .accessibilityLabel(isPlaying ? "Pause audio" : "Play audio")
+                    
+                    // Progress bar and time display
                     VStack(spacing: 8) {
-                        ProgressView(value: currentTime, total: story.duration)
+                        ProgressView(value: story.duration > 0 ? currentTime / story.duration : 0)
                             .progressViewStyle(LinearProgressViewStyle())
+                            .scaleEffect(x: 1, y: 2, anchor: .center)
+                        
                         HStack {
                             Text(formatDuration(currentTime))
                                 .font(.caption)
@@ -70,21 +104,6 @@ struct StoryDetailModal: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    
-                    // Play/Pause button
-                    Button(action: {
-                        if isPlaying {
-                            pauseAudio()
-                        } else {
-                            playAudio()
-                        }
-                    }) {
-                        Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .resizable()
-                            .frame(width: 60, height: 60)
-                            .foregroundColor(.accentColor)
-                    }
-                    .accessibilityLabel(isPlaying ? "Pause audio" : "Play audio")
                 }
                 
                 // Share button
@@ -124,30 +143,87 @@ struct StoryDetailModal: View {
         }
         .onDisappear {
             stopAudio()
+            cleanupAudioPlayer()
+        }
+        .alert("Playback Error", isPresented: $showErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
         }
     }
     
     private func setupAudioPlayer() {
-        // For MVP, use placeholder logic since we don't have real audio files yet
         print("[DEBUG] Setting up audio player for file: \(story.filePath)")
-        // TODO: Implement actual audio file loading when real recordings are available
+        
+        // Configure audio session for playback
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            print("[DEBUG] Audio session configured for playback")
+        } catch {
+            print("[DEBUG] Error configuring audio session: \(error)")
+            showPlaybackError("Failed to configure audio session: \(error.localizedDescription)")
+            return
+        }
+        
+        // Check if file exists
+        let fileURL = URL(fileURLWithPath: story.filePath)
+        guard FileManager.default.fileExists(atPath: story.filePath) else {
+            print("[DEBUG] Audio file not found at path: \(story.filePath)")
+            showPlaybackError("Audio file not found. The recording may have been deleted or moved.")
+            return
+        }
+        
+        // Create and configure AVAudioPlayer
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: fileURL)
+            
+            // Create and store the delegate as a strong reference
+            audioPlayerDelegate = AudioPlayerDelegate { _ in
+                // Handle playback completion
+                DispatchQueue.main.async {
+                    print("[DEBUG] Audio playback completed")
+                    isPlaying = false
+                    currentTime = 0
+                    stopTimer()
+                }
+            }
+            
+            audioPlayer?.delegate = audioPlayerDelegate
+            audioPlayer?.prepareToPlay()
+            print("[DEBUG] Audio player setup successful")
+        } catch {
+            print("[DEBUG] Error creating audio player: \(error)")
+            showPlaybackError("Failed to load audio file: \(error.localizedDescription)")
+        }
     }
     
     private func playAudio() {
+        guard let player = audioPlayer, isPlayButtonEnabled else { return }
+        
         print("[DEBUG] Playing audio for story: \(story.title)")
-        isPlaying = true
-        // TODO: Implement actual audio playback
-        startTimer()
+        
+        if player.play() {
+            isPlaying = true
+            startTimer()
+            print("[DEBUG] Audio playback started successfully")
+        } else {
+            print("[DEBUG] Failed to start audio playback")
+            showPlaybackError("Failed to start audio playback")
+        }
     }
     
     private func pauseAudio() {
         print("[DEBUG] Pausing audio for story: \(story.title)")
+        audioPlayer?.pause()
         isPlaying = false
         stopTimer()
     }
     
     private func stopAudio() {
         print("[DEBUG] Stopping audio for story: \(story.title)")
+        audioPlayer?.stop()
+        audioPlayer?.currentTime = 0
         isPlaying = false
         currentTime = 0
         stopTimer()
@@ -155,10 +231,15 @@ struct StoryDetailModal: View {
     
     private func startTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            if currentTime < story.duration {
-                currentTime += 0.1
-            } else {
-                stopAudio()
+            guard let player = audioPlayer else { return }
+            currentTime = player.currentTime
+            
+            // Check if playback has finished (either reached end or stopped)
+            if currentTime >= story.duration || !player.isPlaying {
+                print("[DEBUG] Playback finished - currentTime: \(currentTime), duration: \(story.duration)")
+                isPlaying = false
+                currentTime = 0
+                stopTimer()
             }
         }
     }
@@ -166,6 +247,20 @@ struct StoryDetailModal: View {
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+    }
+    
+    private func cleanupAudioPlayer() {
+        print("[DEBUG] Cleaning up audio player")
+        stopAudio()
+        audioPlayer = nil
+        audioPlayerDelegate = nil
+    }
+    
+    private func showPlaybackError(_ message: String) {
+        print("[DEBUG] Playback error: \(message)")
+        errorMessage = message
+        isPlayButtonEnabled = false
+        showErrorAlert = true
     }
     
     private func shareStory() {
@@ -178,7 +273,16 @@ struct StoryDetailModal: View {
         let seconds = Int(duration) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
 }
+
+
 
 #Preview {
     StoryDetailModal(story: Story(
