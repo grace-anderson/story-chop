@@ -125,7 +125,7 @@ Display all saved stories with playback and metadata.
 Allow users to replay saved recordings.
 
 ### 4.2 User Flow
-1. Tap on a story from the archive.
+1. Tap on a story from the Recent stories (Home) or All stories.
 2. Press "Play."
 
 ### 4.3 Implementation Details
