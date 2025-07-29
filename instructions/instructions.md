@@ -159,7 +159,6 @@ Allow users to optionally share a story recording.
 Ensure users feel safe and in control of their data.
 
 ### 6.2 Implementation Details
-- Do not collect or transmit recordings.
 - Store all data locally in SwiftData unless explicitly exported.
 - Add clear privacy statement in Settings.
 - Ensure no analytics SDKs capture audio or metadata.
