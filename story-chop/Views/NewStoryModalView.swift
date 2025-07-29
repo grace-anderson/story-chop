@@ -21,6 +21,8 @@ struct NewStoryModalView: View {
     @State private var timer: Timer? = nil
     // Audio recorder
     @State private var audioRecorder: AVAudioRecorder?
+    // Audio recorder delegate (strong reference to prevent deallocation)
+    @State private var audioRecorderDelegate: AudioRecorderDelegate?
     // Recording file path
     @State private var recordingFilePath: String?
     // SwiftData context
@@ -143,7 +145,9 @@ struct NewStoryModalView: View {
         
         do {
             audioRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
-            audioRecorder?.delegate = AudioRecorderDelegate()
+            // Create and store the delegate as a strong reference
+            audioRecorderDelegate = AudioRecorderDelegate()
+            audioRecorder?.delegate = audioRecorderDelegate
             audioRecorder?.prepareToRecord()
             
             if audioRecorder?.record() == true {
