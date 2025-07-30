@@ -15,6 +15,11 @@ struct StoryDetailModal: View {
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
     
+    // Transcription state
+    @State private var transcriptionService = TranscriptionService()
+    @State private var showTranscriptionModal = false
+    @State private var showTranscriptionErrorAlert = false
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
@@ -121,6 +126,22 @@ struct StoryDetailModal: View {
                 }
                 .accessibilityLabel("Share story")
                 
+                // Transcription button
+                Button(action: {
+                    print("[DEBUG] Transcription button tapped for story: \(story.title)")
+                    handleTranscriptionButtonTap()
+                }) {
+                    Label(story.isTranscribed ? "Transcription" : "Transcribe", systemImage: "text.bubble")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(story.isTranscribed ? Color.green : Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                .disabled(transcriptionService.isTranscribing)
+                .accessibilityLabel(story.isTranscribed ? "View transcription" : "Transcribe audio")
+                
                 Spacer()
             }
             .padding()
@@ -149,6 +170,14 @@ struct StoryDetailModal: View {
             Button("OK") { }
         } message: {
             Text(errorMessage)
+        }
+        .alert("Something went wrong", isPresented: $showTranscriptionErrorAlert) {
+            Button("OK") { }
+        }
+        .sheet(isPresented: $showTranscriptionModal) {
+            if let transcription = story.transcription {
+                TranscriptionModal(transcription: transcription)
+            }
         }
     }
     
@@ -268,6 +297,45 @@ struct StoryDetailModal: View {
         print("[DEBUG] Share functionality to be implemented")
     }
     
+    // MARK: - Transcription Functions
+    
+    private func handleTranscriptionButtonTap() {
+        if story.isTranscribed {
+            // Show existing transcription
+            print("[DEBUG] Showing existing transcription for story: \(story.title)")
+            showTranscriptionModal = true
+        } else {
+            // Start new transcription
+            print("[DEBUG] Starting new transcription for story: \(story.title)")
+            startTranscription()
+        }
+    }
+    
+    private func startTranscription() {
+        transcriptionService.transcribeAudio(filePath: story.filePath) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let transcribedText):
+                    print("[DEBUG] Transcription successful for story: \(self.story.title)")
+                    self.saveTranscription(transcribedText)
+                case .failure(let error):
+                    print("[DEBUG] Transcription failed for story: \(self.story.title), error: \(error)")
+                    self.showTranscriptionErrorAlert = true
+                }
+            }
+        }
+    }
+    
+    private func saveTranscription(_ transcription: String) {
+        // Update the story with transcription data
+        story.transcription = transcription
+        story.isTranscribed = true
+        print("[DEBUG] Transcription saved for story: \(story.title)")
+        
+        // Show the transcription modal
+        showTranscriptionModal = true
+    }
+    
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
@@ -289,6 +357,8 @@ struct StoryDetailModal: View {
         title: "Sample Story",
         prompt: "Tell us about your first home",
         duration: 120.0,
-        filePath: "/sample/path"
+        filePath: "/sample/path",
+        transcription: "This is a sample transcription of the audio recording.",
+        isTranscribed: true
     ))
 } 
