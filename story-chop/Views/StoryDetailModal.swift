@@ -23,6 +23,8 @@ struct StoryDetailModal: View {
     // Sharing state
     @State private var sharingService = SharingService()
     @State private var showSharingErrorAlert = false
+    @State private var showSharingSheet = false
+    @State private var shareItems: [Any] = []
     
     var body: some View {
         NavigationView {
@@ -186,6 +188,14 @@ struct StoryDetailModal: View {
                 TranscriptionModal(transcription: transcription)
             }
         }
+        .sheet(isPresented: $showSharingSheet) {
+            SharingSheet(activityItems: shareItems) {
+                // Clean up shared file after sharing
+                if let fileURL = shareItems.first as? URL {
+                    sharingService.cleanupSharedFile(at: fileURL)
+                }
+            }
+        }
     }
     
     private func setupAudioPlayer() {
@@ -307,54 +317,17 @@ struct StoryDetailModal: View {
         let result = sharingService.prepareStoryForSharing(story: story)
         
         switch result {
-        case .success(let shareItems):
-            print("[DEBUG] Share items prepared successfully, showing activity view")
-            presentActivityViewController(with: shareItems)
+        case .success(let items):
+            print("[DEBUG] Share items prepared successfully, showing sharing sheet")
+            shareItems = items
+            showSharingSheet = true
         case .failure(let error):
             print("[DEBUG] Sharing failed: \(error)")
             showSharingErrorAlert = true
         }
     }
     
-    private func presentActivityViewController(with items: [Any]) {
-        let activityViewController = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        
-        // Configure activity view controller
-        activityViewController.excludedActivityTypes = [
-            .assignToContact,
-            .addToReadingList,
-            .openInIBooks,
-            .markupAsPDF
-        ]
-        
-        // Present the activity view controller
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityViewController, animated: true) {
-                print("[DEBUG] Activity view controller presented")
-            }
-        }
-        
-        // Handle completion
-        activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    print("[DEBUG] Activity view controller error: \(error)")
-                }
-                
-                if completed {
-                    print("[DEBUG] Story shared successfully via: \(activityType?.rawValue ?? "unknown")")
-                } else {
-                    print("[DEBUG] Story sharing cancelled")
-                }
-                
-                // Clean up shared file if it was created
-                if let fileURL = items.first as? URL {
-                    self.sharingService.cleanupSharedFile(at: fileURL)
-                }
-            }
-        }
-    }
+
     
     // MARK: - Transcription Functions
     
