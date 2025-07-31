@@ -179,7 +179,9 @@ struct HomeView: View {
             .navigationTitle("Home")
             // Present modal when showNewStoryModal is true
             .sheet(isPresented: $showNewStoryModal) {
-                NewStoryModalView()
+                NewStoryModalView(onDismiss: {
+                    showNewStoryModal = false
+                })
             }
             // Present story detail modal
             .sheet(isPresented: $showStoryDetail) {
