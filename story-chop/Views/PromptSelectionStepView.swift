@@ -6,53 +6,33 @@ struct PromptSelectionStepView: View {
     let onBrowseMore: () -> Void
     
     var body: some View {
-        VStack(spacing: 32) {
-            // Featured prompt card
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                    Text("This week's prompt")
-                        .font(.subheadline)
-                        .bold()
-                }
-                Text("\"\(featuredPrompt)\"")
-                    .font(.title3)
-                    .italic()
-            }
-            .padding()
-            .background(Color.yellow.opacity(0.15))
-            .cornerRadius(12)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Featured prompt: \(featuredPrompt)")
+        VStack(spacing: 0) {
+            Spacer()
             
-            // Ready to record button
+            // Large blue circle button
             Button(action: {
                 print("[DEBUG] I'm Ready to Record tapped")
                 onPromptSelected(featuredPrompt)
             }) {
-                HStack {
+                VStack(spacing: 16) {
                     Image(systemName: "mic.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.white)
+                    
                     Text("I'm Ready to Record")
+                        .font(.title2)
                         .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
                 }
-                .padding()
-                .frame(maxWidth: .infinity)
+                .frame(width: 200, height: 200)
                 .background(Color.accentColor)
-                .foregroundColor(.white)
-                .cornerRadius(12)
+                .clipShape(Circle())
+                .shadow(color: Color.accentColor.opacity(0.3), radius: 10, x: 0, y: 5)
             }
             .accessibilityLabel("I'm ready to record with prompt: \(featuredPrompt)")
             
-            // Browse more button
-            Button(action: {
-                print("[DEBUG] Browse more tapped")
-                onBrowseMore()
-            }) {
-                Text("Browse more prompts")
-                    .underline()
-            }
-            .accessibilityLabel("Browse more prompts")
+            Spacer()
         }
         .padding()
         .onAppear { print("[DEBUG] PromptSelectionStepView appeared") }
