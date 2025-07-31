@@ -9,6 +9,7 @@ private enum NewStoryStep {
 }
 
 struct NewStoryModalView: View {
+    let onDismiss: () -> Void
     // Step state
     @State private var step: NewStoryStep = .promptSelection
     // Selected prompt
@@ -95,7 +96,7 @@ struct NewStoryModalView: View {
                 case .saveConfirmation:
                     SaveConfirmationStepView(onDone: {
                         print("[DEBUG] Save confirmation done, dismiss modal")
-                        // Dismissal handled by parent sheet
+                        onDismiss() // Dismiss the entire modal flow
                     })
                 }
             }
@@ -210,5 +211,5 @@ struct NewStoryModalView: View {
 
 
 #Preview {
-    NewStoryModalView()
+    NewStoryModalView(onDismiss: {})
 } 
