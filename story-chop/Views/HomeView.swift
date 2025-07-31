@@ -10,6 +10,7 @@ struct HomeView: View {
     @Query(sort: \Story.date, order: .reverse) private var allStories: [Story]
     @State private var selectedStory: Story? = nil
     @State private var showStoryDetail = false
+    @State private var dailyPromptService = DailyPromptService()
     
     // Get 5 most recent stories
     var recentStories: [Story] {
@@ -51,16 +52,16 @@ struct HomeView: View {
                         .shadow(color: Color.green.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
                     .accessibilityLabel("Start a new story")
-                    // Featured prompt card
+                    // Daily prompt card
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "star.fill")
                                 .foregroundColor(.yellow)
-                            Text("This week's prompt")
+                            Text("Today's prompt")
                                 .font(.subheadline)
                                 .bold()
                         }
-                        Text("\"Tell us about your first home\"")
+                        Text("\"\(dailyPromptService.currentDailyPrompt)\"")
                             .font(.title3)
                             .italic()
                     }
@@ -68,7 +69,7 @@ struct HomeView: View {
                     .background(Color.yellow.opacity(0.15))
                     .cornerRadius(12)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Featured prompt: Tell us about your first home")
+                    .accessibilityLabel("Today's prompt: \(dailyPromptService.currentDailyPrompt)")
                     // Browse more button
                     Button(action: {
                         print("[DEBUG] Browse more prompts tapped - navigating to Prompts tab")
