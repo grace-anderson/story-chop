@@ -14,7 +14,7 @@ struct HomeView: View {
     
     // Session-based prompt selection
     @State private var showPromptSelectionModal = false
-    @State private var selectedPrompt: String? = nil
+    @StateObject private var selectedPromptManager = SelectedPromptManager.shared
     @State private var showSwitchToDailyPrompt = false
     
     // Get 5 most recent stories
@@ -24,12 +24,12 @@ struct HomeView: View {
     
     // Current prompt to display (selected or daily)
     var currentPrompt: String {
-        selectedPrompt ?? dailyPromptService.currentDailyPrompt
+        selectedPromptManager.selectedPrompt ?? dailyPromptService.currentDailyPrompt
     }
     
     // Whether to show selected prompt or daily prompt
     var isShowingSelectedPrompt: Bool {
-        selectedPrompt != nil
+        selectedPromptManager.selectedPrompt != nil
     }
     
     var body: some View {
@@ -82,7 +82,7 @@ struct HomeView: View {
                             if isShowingSelectedPrompt {
                                 Button(action: {
                                     print("[DEBUG] Switching back to daily prompt")
-                                    selectedPrompt = nil
+                                    selectedPromptManager.clearSelectedPrompt()
                                 }) {
                                     Text("Switch to daily")
                                         .font(.caption)
@@ -211,7 +211,7 @@ struct HomeView: View {
                     onDismiss: {
                         showNewStoryModal = false
                     },
-                    customPrompt: selectedPrompt
+                    customPrompt: selectedPromptManager.selectedPrompt
                 )
             }
             // Present prompt selection modal
@@ -222,7 +222,7 @@ struct HomeView: View {
                     },
                     onPromptSelected: { prompt in
                         print("[DEBUG] Prompt selected from modal: \(prompt)")
-                        selectedPrompt = prompt
+                        selectedPromptManager.setSelectedPrompt(prompt)
                         showPromptSelectionModal = false
                     }
                 )
@@ -237,6 +237,14 @@ struct HomeView: View {
         .onAppear {
             print("[DEBUG] HomeView appeared with \(allStories.count) total stories")
             print("[DEBUG] Current prompt: \(currentPrompt)")
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            // If user navigated from Prompts tab (tag 1) to Home tab (tag 0), 
+            // check if we need to update the selected prompt
+            if oldValue == 1 && newValue == 0 {
+                print("[DEBUG] User navigated from Prompts to Home")
+                // The prompt selection is handled in PromptsView through the confirmation dialog
+            }
         }
     }
     

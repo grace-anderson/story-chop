@@ -6,124 +6,234 @@ struct PromptsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Prompt.text) private var allPrompts: [Prompt]
     @Query(sort: \PromptCategory.name) private var categories: [PromptCategory]
-    @State private var displayedPrompts: [Prompt] = []
+    
+    // Add prompt section state
     @State private var newPromptText: String = ""
     @State private var selectedCategory: String = ""
     @State private var newCategoryText: String = ""
     @State private var validationMessage: String? = nil
     @State private var didSeed: Bool = false
     
+    // Category selection mode
+    @State private var categorySelectionMode: CategorySelectionMode = .existing
+    
+    // Browse prompts state
+    @State private var showPromptSelectionModal = false
+    @State private var showConfirmationDialog = false
+    @State private var selectedPromptForConfirmation: String = ""
+    
+    // Navigation state
+    @Binding var selectedTab: Int
+    
+    enum CategorySelectionMode {
+        case existing
+        case new
+    }
+    
+    // Character limits
+    private let maxCategoryCharacters = 60
+    private let maxPromptCharacters = 200
+    
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                // Refresh button
-                Button(action: {
-                    refreshDisplayedPrompts()
-                }) {
-                    HStack {
-                        Image(systemName: "arrow.clockwise")
-                        Text("Refresh prompts")
-                            .fontWeight(.semibold)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                }
-                .accessibilityLabel("Refresh prompts")
-                // Prompts list
-                ScrollView {
-                    VStack(spacing: 16) {
-                        ForEach(displayedPrompts) { prompt in
-                            HStack(alignment: .center, spacing: 8) {
-                                Text(prompt.text)
-                                    .font(.title3)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(14)
-                                    .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
-                                    .accessibilityLabel("Prompt: \(prompt.text)")
-                                // Show 'Just Added' badge if within 24 hours
-                                if let date = prompt.dateAdded, Date().timeIntervalSince(date) < 60*60*24 {
-                                    Label("Just Added", systemImage: "clock.fill")
-                                        .font(.caption)
-                                        .padding(6)
-                                        .background(Color.green.opacity(0.85))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(8)
-                                        .accessibilityLabel("Just added prompt")
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Add your own prompt section (moved to top)
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Add your own prompt")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        // Prompt text field with character counter
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("Enter your prompt", text: $newPromptText)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .accessibilityLabel("Enter your prompt")
+                            
+                            HStack {
+                                Spacer()
+                                Text("\(newPromptText.count)/\(maxPromptCharacters)")
+                                    .font(.caption)
+                                    .foregroundColor(newPromptText.count > maxPromptCharacters ? .red : .secondary)
+                            }
+                        }
+                        
+                        // Category selection with toggle
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Category")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            // Toggle buttons
+                            HStack(spacing: 12) {
+                                Button(action: {
+                                    categorySelectionMode = .existing
+                                    newCategoryText = ""
+                                }) {
+                                    HStack {
+                                        Image(systemName: categorySelectionMode == .existing ? "checkmark.circle.fill" : "circle")
+                                        Text("Select existing category")
+                                    }
+                                    .foregroundColor(categorySelectionMode == .existing ? .blue : .primary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(categorySelectionMode == .existing ? Color.blue.opacity(0.1) : Color(.systemGray6))
+                                    .cornerRadius(8)
+                                }
+                                
+                                Button(action: {
+                                    categorySelectionMode = .new
+                                    selectedCategory = ""
+                                }) {
+                                    HStack {
+                                        Image(systemName: categorySelectionMode == .new ? "checkmark.circle.fill" : "circle")
+                                        Text("Create new category")
+                                    }
+                                    .foregroundColor(categorySelectionMode == .new ? .blue : .primary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(categorySelectionMode == .new ? Color.blue.opacity(0.1) : Color(.systemGray6))
+                                    .cornerRadius(8)
+                                }
+                            }
+                            
+                            // Category input based on selection mode
+                            if categorySelectionMode == .existing {
+                                Picker("Select category", selection: $selectedCategory) {
+                                    Text("Select category").tag("")
+                                    ForEach(categories, id: \.name) { cat in
+                                        Text(cat.name).tag(cat.name)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                                .accessibilityLabel("Select category")
+                            } else {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    TextField("Enter new category name", text: $newCategoryText)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .accessibilityLabel("Enter new category name")
+                                    
+                                    HStack {
+                                        Spacer()
+                                        Text("\(newCategoryText.count)/\(maxCategoryCharacters)")
+                                            .font(.caption)
+                                            .foregroundColor(newCategoryText.count > maxCategoryCharacters ? .red : .secondary)
+                                    }
                                 }
                             }
                         }
-                    }
-                    .padding(.vertical)
-                }
-                // Add prompt section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Add your own prompt")
-                        .font(.headline)
-                    TextField("Enter your prompt", text: $newPromptText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .accessibilityLabel("Enter your prompt")
-                    HStack {
-                        Picker("Category", selection: $selectedCategory) {
-                            Text("Select category").tag("")
-                            ForEach(categories, id: \.name) { cat in
-                                Text(cat.name).tag(cat.name)
-                            }
+                        
+                        // Add button
+                        Button(action: {
+                            addPrompt()
+                        }) {
+                            Text("Add Prompt")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(isAddButtonEnabled ? Color.green : Color.gray)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
                         }
-                        .pickerStyle(MenuPickerStyle())
-                        .accessibilityLabel("Select category")
-                        Text("or")
-                        TextField("New category", text: $newCategoryText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .accessibilityLabel("Enter new category")
+                        .disabled(!isAddButtonEnabled)
+                        .accessibilityLabel("Add prompt")
+                        
+                        // Validation message
+                        if let message = validationMessage {
+                            Text(message)
+                                .foregroundColor(message == "Prompt added!" ? .green : .red)
+                                .font(.subheadline)
+                        }
                     }
-                    Button(action: {
-                        addPrompt()
-                    }) {
-                        Text("Add Prompt")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(14)
+                    
+                    // Browse prompts section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Browse prompts")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        Button(action: {
+                            print("[DEBUG] Browse prompts tapped")
+                            showPromptSelectionModal = true
+                        }) {
+                            HStack {
+                                Image(systemName: "folder.fill")
+                                    .font(.system(size: 16))
+                                Text("Browse all prompts by category")
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                            }
                             .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
                             .cornerRadius(12)
+                        }
+                        .accessibilityLabel("Browse all prompts by category")
                     }
-                    .disabled(newPromptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (selectedCategory.isEmpty && newCategoryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
-                    .accessibilityLabel("Add prompt")
-                    if let message = validationMessage {
-                        Text(message)
-                            .foregroundColor(message == "Prompt added!" ? .green : .red)
-                            .font(.subheadline)
-                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(14)
+                    
+                    Spacer()
                 }
                 .padding()
-                .background(Color(.systemGray5))
-                .cornerRadius(14)
-                Spacer()
             }
-            .padding()
             .navigationTitle("Prompts")
         }
         .onAppear {
             print("[DEBUG] PromptsView appeared. allPrompts count: \(allPrompts.count)")
             if allPrompts.isEmpty {
                 seedPromptsIfNeeded()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    refreshDisplayedPrompts()
-                }
-            } else {
-                refreshDisplayedPrompts()
             }
         }
-        .onChange(of: allPrompts) { oldValue, newValue in
-            print("[DEBUG] allPrompts changed. New count: \(newValue.count)")
-            refreshDisplayedPrompts()
+        .sheet(isPresented: $showPromptSelectionModal) {
+            PromptSelectionModal(
+                onDismiss: {
+                    showPromptSelectionModal = false
+                },
+                onPromptSelected: { prompt in
+                    print("[DEBUG] Prompt selected from browse: \(prompt)")
+                    selectedPromptForConfirmation = prompt
+                    showConfirmationDialog = true
+                    showPromptSelectionModal = false
+                }
+            )
+        }
+        .alert("Set Selected Prompt", isPresented: $showConfirmationDialog) {
+            Button("Yes") {
+                print("[DEBUG] User confirmed prompt selection: \(selectedPromptForConfirmation)")
+                // Update Home screen's selected prompt
+                updateHomeScreenPrompt(selectedPromptForConfirmation)
+                // Navigate to Home tab
+                selectedTab = 0
+            }
+            Button("No", role: .cancel) {
+                print("[DEBUG] User cancelled prompt selection")
+                selectedPromptForConfirmation = ""
+            }
+        } message: {
+            Text("Set '\(selectedPromptForConfirmation)' as your selected prompt?")
         }
     }
+    
+    // Computed property for add button state
+    private var isAddButtonEnabled: Bool {
+        let trimmedPrompt = newPromptText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCategory = categorySelectionMode == .existing ? 
+            selectedCategory : 
+            newCategoryText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return !trimmedPrompt.isEmpty && 
+               !trimmedCategory.isEmpty && 
+               trimmedPrompt.count <= maxPromptCharacters &&
+               (categorySelectionMode == .existing || trimmedCategory.count <= maxCategoryCharacters)
+    }
+    
     // Helper to seed prompts and categories from .md file
     private func seedPromptsIfNeeded() {
         guard !didSeed, allPrompts.isEmpty else { return }
@@ -140,22 +250,15 @@ struct PromptsView: View {
         try? modelContext.save()
         didSeed = true
     }
-    private func refreshDisplayedPrompts() {
-        print("[DEBUG] Refreshing displayed prompts from SwiftData")
-        // Find all 'just added' prompts (user created, within 24 hours)
-        let justAdded = allPrompts.filter { $0.isUserCreated && $0.dateAdded != nil && Date().timeIntervalSince($0.dateAdded!) < 60*60*24 }
-        // Get the rest, excluding 'just added'
-        let rest = allPrompts.filter { !(justAdded.contains($0)) }
-        // Shuffle the rest and take up to (10 - justAdded.count)
-        let randomRest = Array(rest.shuffled().prefix(max(0, 10 - justAdded.count)))
-        // Combine, with 'just added' always at the top
-        displayedPrompts = justAdded + randomRest
-        print("[DEBUG] displayedPrompts after refresh: \(displayedPrompts.map { $0.text })")
-    }
+    
     private func addPrompt() {
         validationMessage = nil
         let trimmedPrompt = newPromptText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedCategory = selectedCategory.isEmpty ? newCategoryText.trimmingCharacters(in: .whitespacesAndNewlines) : selectedCategory
+        let trimmedCategory = categorySelectionMode == .existing ? 
+            selectedCategory : 
+            newCategoryText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Validation
         if trimmedPrompt.isEmpty {
             validationMessage = "Please enter a prompt."
             return
@@ -164,6 +267,15 @@ struct PromptsView: View {
             validationMessage = "Please select or enter a category."
             return
         }
+        if trimmedPrompt.count > maxPromptCharacters {
+            validationMessage = "Prompt must be \(maxPromptCharacters) characters or less."
+            return
+        }
+        if categorySelectionMode == .new && trimmedCategory.count > maxCategoryCharacters {
+            validationMessage = "Category must be \(maxCategoryCharacters) characters or less."
+            return
+        }
+        
         // Add category if new
         var catToUse: PromptCategory? = categories.first(where: { $0.name == trimmedCategory })
         if catToUse == nil {
@@ -171,18 +283,27 @@ struct PromptsView: View {
             modelContext.insert(newCat)
             catToUse = newCat
         }
+        
         let newPrompt = Prompt(text: trimmedPrompt, category: trimmedCategory, isUserCreated: true, dateAdded: Date())
         modelContext.insert(newPrompt)
         try? modelContext.save()
+        
+        // Reset form
         newPromptText = ""
         newCategoryText = ""
         selectedCategory = ""
-        // Always refresh to put new prompt at the top
-        refreshDisplayedPrompts()
+        categorySelectionMode = .existing
+        
         validationMessage = "Prompt added!"
-        print("[DEBUG] Added new prompt: \(trimmedPrompt) in category: \(trimmedCategory) at \(String(describing: newPrompt.dateAdded))")
-        print("[DEBUG] displayedPrompts after add: \(displayedPrompts.map { $0.text })")
+        print("[DEBUG] Added new prompt: \(trimmedPrompt) in category: \(trimmedCategory)")
     }
+    
+    private func updateHomeScreenPrompt(_ prompt: String) {
+        // Update the shared selected prompt manager
+        SelectedPromptManager.shared.setSelectedPrompt(prompt)
+        print("[DEBUG] Updated Home screen prompt to: \(prompt)")
+    }
+    
     static func seedPromptsData() -> (prompts: [Prompt], categories: [PromptCategory]) {
         let raw = """
 ## Childhood & Family
@@ -216,13 +337,13 @@ struct PromptsView: View {
 - How did you meet your partner?
 - What was your first date like?
 - What advice would you give about love?
-- How did you know they were “the one”?
+- How did you know they were "the one"?
 - Describe your wedding day.
 - What was your first big argument as a couple?
 - What do you admire most about your partner?
 - What did you learn from past relationships?
 - How has your understanding of love changed over time?
-- What’s your secret to a long-lasting relationship?
+- What's your secret to a long-lasting relationship?
 
 ## Raising a Family
 
@@ -240,10 +361,10 @@ struct PromptsView: View {
 ## Home Life & Routines
 
 - What was your first home like?
-- What’s your favourite room in the house, and why?
+- What's your favourite room in the house, and why?
 - Describe a typical Sunday when your kids were young.
 - What kind of meals did you cook regularly?
-- What does “home” mean to you?
+- What does "home" mean to you?
 - Have you ever renovated or built a home?
 - How did your home reflect your personality or values?
 - Do you remember any family pets?
@@ -266,7 +387,7 @@ struct PromptsView: View {
 ## Travel & Adventure
 
 - What was your first big trip?
-- What’s your favourite travel memory?
+- What's your favourite travel memory?
 - Did you ever get lost or have a funny travel mishap?
 - Where did you go on family holidays?
 - If you could go anywhere again, where would it be?
@@ -278,13 +399,13 @@ struct PromptsView: View {
 
 ## Life Lessons & Reflections
 
-- What’s the best advice you’ve ever received?
+- What's the best advice you've ever received?
 - What have you learned about forgiveness?
 - How have your priorities changed over time?
 - What does happiness mean to you now?
-- What’s something you used to worry about that doesn’t matter anymore?
+- What's something you used to worry about that doesn't matter anymore?
 - What life lesson took you the longest to learn?
-- What’s something you’re proud of that others might not know about?
+- What's something you're proud of that others might not know about?
 - How do you define success?
 - What would you tell your younger self?
 - How do you want to be remembered?
@@ -293,9 +414,9 @@ struct PromptsView: View {
 
 - What birthdays do you remember best?
 - How did you celebrate major anniversaries?
-- What’s a moment when you felt truly celebrated?
+- What's a moment when you felt truly celebrated?
 - Did you ever throw or attend a surprise party?
-- How did you celebrate your children’s milestones?
+- How did you celebrate your children's milestones?
 - What was a meaningful retirement celebration?
 - What traditions did you create for special occasions?
 - What did holidays look like in your family?
@@ -305,9 +426,9 @@ struct PromptsView: View {
 ## Hobbies, Passions & Everyday Joys
 
 - What hobbies have you loved over the years?
-- What’s something you’ve made with your hands?
+- What's something you've made with your hands?
 - What music takes you back in time?
-- What’s a book or film that changed how you see the world?
+- What's a book or film that changed how you see the world?
 - What simple pleasures bring you the most joy?
 - Did you ever collect anything?
 - What was a favourite way to spend a quiet afternoon?
@@ -324,8 +445,8 @@ struct PromptsView: View {
 - What role did friends play during difficult times?
 - Have you ever lost touch with a friend and reconnected later?
 - What qualities do you value most in a friend?
-- What’s a funny or memorable story involving your friends?
-- How have your friendships changed as you’ve grown older?
+- What's a funny or memorable story involving your friends?
+- How have your friendships changed as you've grown older?
 - What does friendship mean to you today?
 """
         var prompts: [Prompt] = []
@@ -349,5 +470,5 @@ struct PromptsView: View {
 }
 
 #Preview {
-    PromptsView()
+    PromptsView(selectedTab: .constant(1))
 } 

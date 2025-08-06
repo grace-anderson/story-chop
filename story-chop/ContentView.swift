@@ -26,7 +26,7 @@ struct ContentView: View {
                     Text("Home")
                 }
                 .tag(0)
-            PromptsView()
+            PromptsView(selectedTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "lightbulb.fill") // Intuitive SF Symbol for Prompts
                     Text("Prompts")
