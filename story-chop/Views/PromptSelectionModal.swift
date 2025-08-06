@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 // Enum for modal navigation states
 private enum PromptSelectionState {
@@ -10,25 +11,24 @@ struct PromptSelectionModal: View {
     let onDismiss: () -> Void
     let onPromptSelected: (String) -> Void
     
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \PromptCategory.name) private var categories: [PromptCategory]
+    @Query(sort: \Prompt.text) private var allPrompts: [Prompt]
+    
     @State private var currentState: PromptSelectionState = .categories
     @State private var selectedCategory: String = ""
     
-    // Organized prompts by category
-    private let categorizedPrompts: [String: [String]] = [
-        "Family & Home": [
-            "Tell us about your first home",
-            "Describe a favorite family tradition"
-        ],
-        "People & Inspiration": [
-            "Who inspired you as a child?"
-        ],
-        "Work & Career": [
-            "What was your first job?"
-        ],
-        "Memories & Experiences": [
-            "Share a memorable holiday experience"
-        ]
-    ]
+    // Get prompts organized by category
+    private var categorizedPrompts: [String: [String]] {
+        var result: [String: [String]] = [:]
+        
+        for category in categories {
+            let categoryPrompts = allPrompts.filter { $0.category == category.name }
+            result[category.name] = categoryPrompts.map { $0.text }
+        }
+        
+        return result
+    }
     
     var body: some View {
         NavigationView {
@@ -36,7 +36,8 @@ struct PromptSelectionModal: View {
                 switch currentState {
                 case .categories:
                     CategorySelectionView(
-                        categories: Array(categorizedPrompts.keys.sorted()),
+                        categories: categories,
+                        categorizedPrompts: categorizedPrompts,
                         onCategorySelected: { category in
                             print("[DEBUG] Category selected: \(category)")
                             selectedCategory = category
@@ -77,31 +78,37 @@ struct PromptSelectionModal: View {
             }
         }
         .onAppear {
-            print("[DEBUG] PromptSelectionModal appeared")
+            print("[DEBUG] PromptSelectionModal appeared with \(categories.count) categories and \(allPrompts.count) total prompts")
+            // Force a refresh of the SwiftData queries to ensure data is loaded
+            if categories.isEmpty {
+                print("[DEBUG] No categories found, triggering refresh")
+                // This will trigger the SwiftData queries to refresh
+            }
         }
     }
 }
 
 // Category selection view
 private struct CategorySelectionView: View {
-    let categories: [String]
+    let categories: [PromptCategory]
+    let categorizedPrompts: [String: [String]]
     let onCategorySelected: (String) -> Void
     
     var body: some View {
-        ScrollView {
+        ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 16) {
-                ForEach(categories, id: \.self) { category in
+                ForEach(categories, id: \.id) { category in
                     Button(action: {
-                        onCategorySelected(category)
+                        onCategorySelected(category.name)
                     }) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(category)
+                                Text(category.name)
                                     .font(.headline)
                                     .foregroundColor(.primary)
                                     .multilineTextAlignment(.leading)
                                 
-                                Text("\(categorizedPrompts[category]?.count ?? 0) prompts")
+                                Text("\(categorizedPrompts[category.name]?.count ?? 0) prompts")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -118,30 +125,16 @@ private struct CategorySelectionView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding()
+            .padding(.leading, 16)
+            .padding(.trailing, 24) // Extra padding on right to make scroll indicator more accessible
+            .padding(.top, 8)
+            .padding(.bottom, 20) // Extra padding at bottom for better scrolling
         }
+        .scrollIndicators(.visible, axes: .vertical) // Make scroll indicators always visible
+        .scrollContentBackground(.hidden) // Hide background to make scroll indicator more prominent
         .onAppear {
             print("[DEBUG] CategorySelectionView appeared with \(categories.count) categories")
         }
-    }
-    
-    // Helper to get prompt count for each category
-    private var categorizedPrompts: [String: [String]] {
-        [
-            "Family & Home": [
-                "Tell us about your first home",
-                "Describe a favorite family tradition"
-            ],
-            "People & Inspiration": [
-                "Who inspired you as a child?"
-            ],
-            "Work & Career": [
-                "What was your first job?"
-            ],
-            "Memories & Experiences": [
-                "Share a memorable holiday experience"
-            ]
-        ]
     }
 }
 
@@ -152,7 +145,7 @@ private struct PromptListView: View {
     let onPromptSelected: (String) -> Void
     
     var body: some View {
-        ScrollView {
+        ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 12) {
                 ForEach(prompts, id: \.self) { prompt in
                     Button(action: {
@@ -177,8 +170,13 @@ private struct PromptListView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding()
+            .padding(.leading, 16)
+            .padding(.trailing, 24) // Extra padding on right to make scroll indicator more accessible
+            .padding(.top, 8)
+            .padding(.bottom, 20) // Extra padding at bottom for better scrolling
         }
+        .scrollIndicators(.visible, axes: .vertical) // Make scroll indicators always visible
+        .scrollContentBackground(.hidden) // Hide background to make scroll indicator more prominent
         .onAppear {
             print("[DEBUG] PromptListView appeared for category: \(category) with \(prompts.count) prompts")
         }
