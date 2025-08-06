@@ -9,9 +9,11 @@ private enum NewStoryStep {
 
 struct NewStoryModalView: View {
     let onDismiss: () -> Void
+    let customPrompt: String? // Optional custom prompt to use instead of daily prompt
+    
     // Step state
     @State private var step: NewStoryStep = .recording
-    // Selected prompt - automatically use daily prompt
+    // Selected prompt - use custom prompt if provided, otherwise daily prompt
     @State private var selectedPrompt: String
     // Recording duration (seconds)
     @State private var recordingDuration: Int = 0
@@ -30,11 +32,14 @@ struct NewStoryModalView: View {
     // Daily prompt service
     @State private var dailyPromptService = DailyPromptService()
     
-    // Initialize with daily prompt
-    init(onDismiss: @escaping () -> Void) {
+    // Initialize with custom prompt or daily prompt
+    init(onDismiss: @escaping () -> Void, customPrompt: String? = nil) {
         self.onDismiss = onDismiss
+        self.customPrompt = customPrompt
+        
         let dailyPromptService = DailyPromptService()
-        self._selectedPrompt = State(initialValue: dailyPromptService.currentDailyPrompt)
+        let initialPrompt = customPrompt ?? dailyPromptService.currentDailyPrompt
+        self._selectedPrompt = State(initialValue: initialPrompt)
     }
     
     var body: some View {
@@ -83,7 +88,7 @@ struct NewStoryModalView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear { 
-            print("[DEBUG] NewStoryModalView appeared with daily prompt: \(selectedPrompt)")
+            print("[DEBUG] NewStoryModalView appeared with prompt: \(selectedPrompt)")
             setupAudioSession()
         }
         .onDisappear {

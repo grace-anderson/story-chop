@@ -12,9 +12,24 @@ struct HomeView: View {
     @State private var showStoryDetail = false
     @State private var dailyPromptService = DailyPromptService()
     
+    // Session-based prompt selection
+    @State private var showPromptSelectionModal = false
+    @State private var selectedPrompt: String? = nil
+    @State private var showSwitchToDailyPrompt = false
+    
     // Get 5 most recent stories
     var recentStories: [Story] {
         Array(allStories.prefix(5))
+    }
+    
+    // Current prompt to display (selected or daily)
+    var currentPrompt: String {
+        selectedPrompt ?? dailyPromptService.currentDailyPrompt
+    }
+    
+    // Whether to show selected prompt or daily prompt
+    var isShowingSelectedPrompt: Bool {
+        selectedPrompt != nil
     }
     
     var body: some View {
@@ -52,33 +67,45 @@ struct HomeView: View {
                         .shadow(color: Color.green.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
                     .accessibilityLabel("Start a new story")
-                    // Daily prompt card
+                    // Prompt card (daily or selected)
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
-                            Text("Today's prompt")
+                            Image(systemName: isShowingSelectedPrompt ? "person.fill" : "star.fill")
+                                .foregroundColor(isShowingSelectedPrompt ? .blue : .yellow)
+                            Text(isShowingSelectedPrompt ? "Your selected prompt" : "Today's prompt")
                                 .font(.subheadline)
                                 .bold()
+                            
+                            Spacer()
+                            
+                            // Show switch option if user has selected a prompt
+                            if isShowingSelectedPrompt {
+                                Button(action: {
+                                    print("[DEBUG] Switching back to daily prompt")
+                                    selectedPrompt = nil
+                                }) {
+                                    Text("Switch to daily")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
+                            }
                         }
-                        Text("\"\(dailyPromptService.currentDailyPrompt)\"")
+                        Text("\"\(currentPrompt)\"")
                             .font(.title3)
                             .italic()
                     }
                     .padding()
-                    .background(Color.yellow.opacity(0.15))
+                    .background(isShowingSelectedPrompt ? Color.blue.opacity(0.15) : Color.yellow.opacity(0.15))
                     .cornerRadius(12)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Today's prompt: \(dailyPromptService.currentDailyPrompt)")
-                    // Browse more button
+                    .accessibilityLabel("\(isShowingSelectedPrompt ? "Your selected prompt" : "Today's prompt"): \(currentPrompt)")
+                    // Select a new prompt button
                     Button(action: {
-                        print("[DEBUG] Browse more prompts tapped - navigating to Prompts tab")
-                        selectedTab = 1 // Switch to Prompts tab (tag 1)
+                        print("[DEBUG] Select a new prompt tapped")
+                        showPromptSelectionModal = true
                     }) {
                         HStack {
-                            Image(systemName: "lightbulb.fill")
-                                .font(.system(size: 14))
-                            Text("Browse more prompts")
+                            Text("Select a new prompt")
                                 .fontWeight(.medium)
                         }
                         .frame(maxWidth: .infinity)
@@ -88,7 +115,7 @@ struct HomeView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                     }
-                    .accessibilityLabel("Browse more prompts")
+                    .accessibilityLabel("Select a new prompt")
                     // Recent Stories header
                     HStack {
                         Text("Recent Stories")
@@ -180,9 +207,25 @@ struct HomeView: View {
             .navigationTitle("Home")
             // Present modal when showNewStoryModal is true
             .sheet(isPresented: $showNewStoryModal) {
-                NewStoryModalView(onDismiss: {
-                    showNewStoryModal = false
-                })
+                NewStoryModalView(
+                    onDismiss: {
+                        showNewStoryModal = false
+                    },
+                    customPrompt: selectedPrompt
+                )
+            }
+            // Present prompt selection modal
+            .sheet(isPresented: $showPromptSelectionModal) {
+                PromptSelectionModal(
+                    onDismiss: {
+                        showPromptSelectionModal = false
+                    },
+                    onPromptSelected: { prompt in
+                        print("[DEBUG] Prompt selected from modal: \(prompt)")
+                        selectedPrompt = prompt
+                        showPromptSelectionModal = false
+                    }
+                )
             }
             // Present story detail modal
             .sheet(isPresented: $showStoryDetail) {
@@ -193,6 +236,7 @@ struct HomeView: View {
         }
         .onAppear {
             print("[DEBUG] HomeView appeared with \(allStories.count) total stories")
+            print("[DEBUG] Current prompt: \(currentPrompt)")
         }
     }
     
