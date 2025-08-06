@@ -3,7 +3,6 @@ import AVFoundation
 
 // Enum for modal steps
 private enum NewStoryStep {
-    case promptSelection
     case recording
     case saveConfirmation
 }
@@ -11,9 +10,9 @@ private enum NewStoryStep {
 struct NewStoryModalView: View {
     let onDismiss: () -> Void
     // Step state
-    @State private var step: NewStoryStep = .promptSelection
-    // Selected prompt
-    @State private var selectedPrompt: String? = nil
+    @State private var step: NewStoryStep = .recording
+    // Selected prompt - automatically use daily prompt
+    @State private var selectedPrompt: String
     // Recording duration (seconds)
     @State private var recordingDuration: Int = 0
     // Is recording active
@@ -28,17 +27,14 @@ struct NewStoryModalView: View {
     @State private var recordingFilePath: String?
     // SwiftData context
     @Environment(\.modelContext) private var modelContext
-    // Static prompt list
-    let prompts = [
-        "Tell us about your first home",
-        "Who inspired you as a child?",
-        "Describe a favorite family tradition",
-        "What was your first job?",
-        "Share a memorable holiday experience"
-    ]
-    // Randomly select a featured prompt
-    var featuredPrompt: String {
-        prompts.randomElement() ?? "Share a memory!"
+    // Daily prompt service
+    @State private var dailyPromptService = DailyPromptService()
+    
+    // Initialize with daily prompt
+    init(onDismiss: @escaping () -> Void) {
+        self.onDismiss = onDismiss
+        let dailyPromptService = DailyPromptService()
+        self._selectedPrompt = State(initialValue: dailyPromptService.currentDailyPrompt)
     }
     
     var body: some View {
@@ -51,46 +47,28 @@ struct NewStoryModalView: View {
                     .padding(.top)
                 
                 switch step {
-                case .promptSelection:
-                    PromptSelectionStepView(
-                        featuredPrompt: featuredPrompt,
-                        onPromptSelected: { prompt in
-                            print("[DEBUG] Prompt selected: \(prompt)")
-                            selectedPrompt = prompt
-                            step = .recording
+                case .recording:
+                    RecordingStepView(
+                        prompt: selectedPrompt,
+                        isRecording: $isRecording,
+                        duration: $recordingDuration,
+                        onSave: {
+                            print("[DEBUG] Recording saved. Duration: \(recordingDuration)s")
+                            stopRecording()
+                            saveStoryToSwiftData()
+                            step = .saveConfirmation
                         },
-                        onBrowseMore: {
-                            // For MVP, just pick a random prompt
-                            let prompt = prompts.randomElement() ?? "Share a memory!"
-                            print("[DEBUG] Browse more tapped, picked: \(prompt)")
-                            selectedPrompt = prompt
+                        onCancel: {
+                            print("[DEBUG] Recording cancelled, dismissing modal")
+                            stopRecording()
+                            onDismiss()
                         }
                     )
-                case .recording:
-                    if let prompt = selectedPrompt {
-                        RecordingStepView(
-                            prompt: prompt,
-                            isRecording: $isRecording,
-                            duration: $recordingDuration,
-                            onSave: {
-                                print("[DEBUG] Recording saved. Duration: \(recordingDuration)s")
-                                stopRecording()
-                                saveStoryToSwiftData()
-                                step = .saveConfirmation
-                            },
-                            onCancel: {
-                                print("[DEBUG] Recording cancelled, returning to prompt selection")
-                                stopRecording()
-                                step = .promptSelection
-                                recordingDuration = 0
-                            }
-                        )
-                        .onChange(of: isRecording) { _, newValue in
-                            if newValue {
-                                startRecording()
-                            } else {
-                                stopRecording()
-                            }
+                    .onChange(of: isRecording) { _, newValue in
+                        if newValue {
+                            startRecording()
+                        } else {
+                            stopRecording()
                         }
                     }
                 case .saveConfirmation:
@@ -105,7 +83,7 @@ struct NewStoryModalView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear { 
-            print("[DEBUG] NewStoryModalView appeared")
+            print("[DEBUG] NewStoryModalView appeared with daily prompt: \(selectedPrompt)")
             setupAudioSession()
         }
         .onDisappear {
@@ -182,15 +160,15 @@ struct NewStoryModalView: View {
     }
     
     private func saveStoryToSwiftData() {
-        guard let prompt = selectedPrompt, let filePath = recordingFilePath else { 
-            print("[DEBUG] Cannot save story - missing prompt or file path")
+        guard let filePath = recordingFilePath else { 
+            print("[DEBUG] Cannot save story - missing file path")
             return 
         }
         
         // Create Story object and save to SwiftData
         let story = Story(
-            title: prompt, // Auto-assign title from prompt
-            prompt: prompt,
+            title: selectedPrompt, // Auto-assign title from prompt
+            prompt: selectedPrompt,
             duration: TimeInterval(recordingDuration),
             filePath: filePath,
             isShared: false
