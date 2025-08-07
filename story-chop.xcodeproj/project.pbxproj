@@ -10,9 +10,22 @@
 		79FDDC4A2E2CE3DC00D1599F /* story-chop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "story-chop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		79DF23262E44C9F600009085 /* Exceptions for "story-chop" folder in "story-chop" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 79FDDC492E2CE3DC00D1599F /* story-chop */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		79FDDC4C2E2CE3DC00D1599F /* story-chop */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				79DF23262E44C9F600009085 /* Exceptions for "story-chop" folder in "story-chop" target */,
+			);
 			path = "story-chop";
 			sourceTree = "<group>";
 		};
@@ -255,6 +268,7 @@
 				DEVELOPMENT_TEAM = X7H344P957;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "story-chop/Info.plist";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StoryChop needs access to your microphone to record your personal stories and memories.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "StoryChop uses speech recognition to transcribe your recorded stories into text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -286,6 +300,7 @@
 				DEVELOPMENT_TEAM = X7H344P957;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "story-chop/Info.plist";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StoryChop needs access to your microphone to record your personal stories and memories.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "StoryChop uses speech recognition to transcribe your recorded stories into text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

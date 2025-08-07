@@ -6,7 +6,7 @@ struct PrivacyPolicyView: View {
     
     var body: some View {
         NavigationView {
-            WebView(url: URL(string: "https://grace-anderson.github.io/story-chop/")!)
+            WebView(url: URL(string: "https://grace-anderson.github.io/storyChop/")!)
                 .navigationTitle("Privacy Policy")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
