@@ -8,19 +8,12 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Story.date, order: .reverse) private var allStories: [Story]
-    @State private var selectedStory: Story? = nil
-    @State private var showStoryDetail = false
     @State private var dailyPromptService = DailyPromptService()
     
     // Session-based prompt selection
     @State private var showPromptSelectionModal = false
     @StateObject private var selectedPromptManager = SelectedPromptManager.shared
     @State private var showSwitchToDailyPrompt = false
-    
-    // Get 5 most recent stories
-    var recentStories: [Story] {
-        Array(allStories.prefix(5))
-    }
     
     // Current prompt to display (selected or daily)
     var currentPrompt: String {
@@ -105,6 +98,8 @@ struct HomeView: View {
                         showPromptSelectionModal = true
                     }) {
                         HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .font(.system(size: 20))
                             Text("Select a new prompt")
                                 .fontWeight(.medium)
                         }
@@ -116,90 +111,25 @@ struct HomeView: View {
                         .cornerRadius(10)
                     }
                     .accessibilityLabel("Select a new prompt")
-                    // Recent Stories header
-                    HStack {
-                        Text("Recent Stories")
-                            .font(.headline)
-                        Spacer()
-                        Button(action: { 
-                            print("[DEBUG] View All tapped - navigating to All Stories tab")
-                            selectedTab = 2 // Switch to All Stories tab (tag 2)
-                        }) {
-                            Text("View All")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
+                    // View Stories button
+                    Button(action: { 
+                        print("[DEBUG] View Stories tapped - navigating to All Stories tab")
+                        selectedTab = 2 // Switch to All Stories tab (tag 2)
+                    }) {
+                        HStack {
+                            Image(systemName: "list.bullet")
+                                .font(.system(size: 20))
+                            Text("View Stories")
+                                .fontWeight(.medium)
                         }
-                    }
-                    // Dynamic recent stories list from SwiftData
-                    if recentStories.isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "waveform")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                            Text("No stories yet")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text("Record your first story to see it here")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    } else {
-                        VStack(spacing: 12) {
-                            ForEach(recentStories) { story in
-                                Button(action: {
-                                    print("[DEBUG] Recent story tapped: \(story.title)")
-                                    selectedStory = story
-                                    showStoryDetail = true
-                                }) {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(story.title)
-                                                .font(.body)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.primary)
-                                            HStack(spacing: 12) {
-                                                Text(story.date, style: .date)
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                                Text(formatDuration(story.duration))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                                if story.isShared {
-                                                    HStack(spacing: 2) {
-                                                        Image(systemName: "arrowshape.turn.up.right.fill")
-                                                            .font(.caption2)
-                                                            .foregroundColor(.green)
-                                                        Text("Shared")
-                                                            .font(.caption2)
-                                                            .foregroundColor(.green)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        Spacer()
-                                        Button(action: { 
-                                            print("[DEBUG] Play tapped for \(story.title)")
-                                            selectedStory = story
-                                            showStoryDetail = true
-                                        }) {
-                                            Image(systemName: "play.circle.fill")
-                                                .font(.system(size: 28))
-                                                .foregroundColor(.gray)
-                                        }
-                                        .accessibilityLabel("Play \(story.title)")
-                                    }
-                                    .padding()
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(12)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color.blue.opacity(0.7))
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                     }
+                    .accessibilityLabel("View stories")
 
                 }
                 .padding()
@@ -226,12 +156,6 @@ struct HomeView: View {
                         showPromptSelectionModal = false
                     }
                 )
-            }
-            // Present story detail modal
-            .sheet(isPresented: $showStoryDetail) {
-                if let story = selectedStory {
-                    StoryDetailModal(story: story)
-                }
             }
         }
         .onAppear {

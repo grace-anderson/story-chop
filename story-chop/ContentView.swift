@@ -34,8 +34,8 @@ struct ContentView: View {
                 .tag(1)
             AllStoriesView()
                 .tabItem {
-                    Image(systemName: "list.bullet") // SF Symbol for All Stories
-                    Text("All Stories")
+                    Image(systemName: "list.bullet") // SF Symbol for Stories
+                    Text("Stories")
                 }
                 .tag(2)
             SettingsView()
