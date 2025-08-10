@@ -45,12 +45,6 @@ struct NewStoryModalView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // Debug info
-                Text("Step: \(String(describing: step))")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.top)
-                
                 switch step {
                 case .recording:
                     RecordingStepView(
