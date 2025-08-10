@@ -68,7 +68,7 @@ struct PromptSelectionModal: View {
                 }
                 
                 if case .prompts = currentState {
-                    ToolbarItem(placement: .navigationBarLeading) {
+                    ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Back") {
                             print("[DEBUG] Going back to categories")
                             currentState = .categories
