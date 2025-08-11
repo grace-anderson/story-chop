@@ -89,6 +89,68 @@ struct PromptsView: View {
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(14)
+
+                    // Recently added prompts section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Recently added prompts")
+                            .font(.headline)
+                            .fontWeight(.bold)
+
+                        if let recentPrompts = getRecentPrompts(), !recentPrompts.isEmpty {
+                            VStack(spacing: 12) {
+                                ForEach(recentPrompts, id: \.id) { prompt in
+                                    Button(action: {
+                                        print("[DEBUG] Recent prompt tapped: \(prompt.text)")
+                                        selectedPromptForConfirmation = prompt.text
+                                        showConfirmationDialog = true
+                                    }) {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text(prompt.text)
+                                                .font(.body)
+                                                .foregroundColor(.primary)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                            
+                                            HStack {
+                                                Text(prompt.category)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(Color.blue.opacity(0.1))
+                                                    .cornerRadius(6)
+                                                
+                                                Spacer()
+                                                
+                                                Text(formatDate(prompt.dateAdded))
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                        .padding()
+                                        .background(Color(.systemBackground))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .accessibilityLabel("Select prompt: \(prompt.text)")
+                                }
+                            }
+                        } else {
+                            Text("Add a prompt to see it here")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .italic()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding()
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(14)
                     
                     Spacer()
                 }
@@ -324,6 +386,40 @@ struct PromptsView: View {
             }
         }
         return (prompts, categories)
+    }
+    
+    // Helper function to get the 5 most recently added prompts
+    private func getRecentPrompts() -> [Prompt]? {
+        print("[DEBUG] Getting recent prompts")
+        
+        // Filter for user-created prompts with dateAdded, sorted by most recent first
+        let userPrompts = allPrompts.filter { $0.isUserCreated && $0.dateAdded != nil }
+        
+        if userPrompts.isEmpty {
+            print("[DEBUG] No user-created prompts found")
+            return nil
+        }
+        
+        // Sort by dateAdded (most recent first) and take first 5
+        let sortedPrompts = userPrompts.sorted { 
+            guard let date1 = $0.dateAdded, let date2 = $1.dateAdded else { return false }
+            return date1 > date2 
+        }
+        
+        let recentPrompts = Array(sortedPrompts.prefix(5))
+        print("[DEBUG] Found \(recentPrompts.count) recent prompts")
+        return recentPrompts
+    }
+    
+    // Helper function to format the date for display
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "Unknown date" }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        
+        return formatter.string(from: date)
     }
 }
 
