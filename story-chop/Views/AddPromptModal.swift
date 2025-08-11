@@ -3,6 +3,7 @@ import SwiftData
 
 struct AddPromptModal: View {
     let onDismiss: () -> Void
+    let onPromptAdded: () -> Void
     
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PromptCategory.name) private var categories: [PromptCategory]
@@ -264,8 +265,9 @@ struct AddPromptModal: View {
             try modelContext.save()
             print("[DEBUG] Added new prompt: \(trimmedPrompt) in category: \(trimmedCategory)")
             
-                                    // Show success alert
+                                    // Show success alert and notify parent to refresh daily prompts
                         showSuccessAlert = true
+                        onPromptAdded()
             
         } catch {
             print("[DEBUG] Error saving prompt: \(error)")
@@ -289,5 +291,5 @@ struct AddPromptModal: View {
 }
 
 #Preview {
-    AddPromptModal(onDismiss: {})
+    AddPromptModal(onDismiss: {}, onPromptAdded: {})
 }

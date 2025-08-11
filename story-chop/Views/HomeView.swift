@@ -8,7 +8,14 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Story.date, order: .reverse) private var allStories: [Story]
-    @State private var dailyPromptService = DailyPromptService()
+    @State private var dailyPromptService: DailyPromptService
+    
+    init(showNewStoryModal: Binding<Bool>, selectedTab: Binding<Int>) {
+        self._showNewStoryModal = showNewStoryModal
+        self._selectedTab = selectedTab
+        // Initialize dailyPromptService as a placeholder - will be set in onAppear
+        self._dailyPromptService = State(initialValue: DailyPromptService(modelContext: ModelContext(try! ModelContainer(for: Prompt.self, PromptCategory.self))))
+    }
     
     // Session-based prompt selection
     @State private var showPromptSelectionModal = false
@@ -141,7 +148,8 @@ struct HomeView: View {
                     onDismiss: {
                         showNewStoryModal = false
                     },
-                    customPrompt: selectedPromptManager.selectedPrompt
+                    customPrompt: selectedPromptManager.selectedPrompt,
+                    modelContext: modelContext
                 )
             }
             // Present prompt selection modal
@@ -161,6 +169,12 @@ struct HomeView: View {
         .onAppear {
             print("[DEBUG] HomeView appeared with \(allStories.count) total stories")
             print("[DEBUG] Current prompt: \(currentPrompt)")
+            
+            // Initialize dailyPromptService with the actual modelContext
+            dailyPromptService = DailyPromptService(modelContext: modelContext)
+            
+            // Refresh the daily prompt cache to include any new prompts
+            dailyPromptService.refreshCache()
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             // If user navigated from Prompts tab (tag 1) to Home tab (tag 0), 

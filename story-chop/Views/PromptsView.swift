@@ -181,6 +181,11 @@ struct PromptsView: View {
             AddPromptModal(
                 onDismiss: {
                     showAddPromptModal = false
+                },
+                onPromptAdded: {
+                    print("[DEBUG] Prompt added, refreshing daily prompt service cache")
+                    // Refresh the daily prompt service cache to include new prompts
+                    // This will be handled by the HomeView when it appears
                 }
             )
         }

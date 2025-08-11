@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import SwiftData
 
 // Enum for modal steps
 private enum NewStoryStep {
@@ -30,16 +31,17 @@ struct NewStoryModalView: View {
     // SwiftData context
     @Environment(\.modelContext) private var modelContext
     // Daily prompt service
-    @State private var dailyPromptService = DailyPromptService()
+    @State private var dailyPromptService: DailyPromptService
     
     // Initialize with custom prompt or daily prompt
-    init(onDismiss: @escaping () -> Void, customPrompt: String? = nil) {
+    init(onDismiss: @escaping () -> Void, customPrompt: String? = nil, modelContext: ModelContext) {
         self.onDismiss = onDismiss
         self.customPrompt = customPrompt
         
-        let dailyPromptService = DailyPromptService()
+        let dailyPromptService = DailyPromptService(modelContext: modelContext)
         let initialPrompt = customPrompt ?? dailyPromptService.currentDailyPrompt
         self._selectedPrompt = State(initialValue: initialPrompt)
+        self._dailyPromptService = State(initialValue: dailyPromptService)
     }
     
     var body: some View {
@@ -188,5 +190,9 @@ struct NewStoryModalView: View {
 
 
 #Preview {
-    NewStoryModalView(onDismiss: {})
+    NewStoryModalView(
+        onDismiss: {},
+        customPrompt: nil,
+        modelContext: try! ModelContainer(for: Prompt.self, PromptCategory.self).mainContext
+    )
 } 
