@@ -7,149 +7,25 @@ struct PromptsView: View {
     @Query(sort: \Prompt.text) private var allPrompts: [Prompt]
     @Query(sort: \PromptCategory.name) private var categories: [PromptCategory]
     
-    // Add prompt section state
-    @State private var newPromptText: String = ""
-    @State private var selectedCategory: String = ""
-    @State private var newCategoryText: String = ""
-    @State private var validationMessage: String? = nil
-    @State private var didSeed: Bool = false
-    
-    // Category selection mode
-    @State private var categorySelectionMode: CategorySelectionMode = .existing
-    
     // Browse prompts state
     @State private var showPromptSelectionModal = false
     @State private var showConfirmationDialog = false
     @State private var selectedPromptForConfirmation: String = ""
     
+    // Add prompt modal state
+    @State private var showAddPromptModal = false
+    
     // Navigation state
     @Binding var selectedTab: Int
     
-    enum CategorySelectionMode {
-        case existing
-        case new
-    }
-    
-    // Character limits
-    private let maxCategoryCharacters = 60
-    private let maxPromptCharacters = 200
+    // Seeding state
+    @State private var didSeed: Bool = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Add your own prompt section (moved to top)
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Add your own prompt")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        // Prompt text field with character counter
-                        VStack(alignment: .leading, spacing: 4) {
-                            TextField("Enter your prompt", text: $newPromptText)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .accessibilityLabel("Enter your prompt")
-                            
-                            HStack {
-                                Spacer()
-                                Text("\(newPromptText.count)/\(maxPromptCharacters)")
-                                    .font(.caption)
-                                    .foregroundColor(newPromptText.count > maxPromptCharacters ? .red : .secondary)
-                            }
-                        }
-                        
-                        // Category selection with toggle
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Category")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
-                            // Toggle buttons
-                            HStack(spacing: 12) {
-                                Button(action: {
-                                    categorySelectionMode = .existing
-                                    newCategoryText = ""
-                                }) {
-                                    HStack {
-                                        Image(systemName: categorySelectionMode == .existing ? "checkmark.circle.fill" : "circle")
-                                        Text("Select existing category")
-                                    }
-                                    .foregroundColor(categorySelectionMode == .existing ? .blue : .primary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(categorySelectionMode == .existing ? Color.blue.opacity(0.1) : Color(.systemGray6))
-                                    .cornerRadius(8)
-                                }
-                                
-                                Button(action: {
-                                    categorySelectionMode = .new
-                                    selectedCategory = ""
-                                }) {
-                                    HStack {
-                                        Image(systemName: categorySelectionMode == .new ? "checkmark.circle.fill" : "circle")
-                                        Text("Create new category")
-                                    }
-                                    .foregroundColor(categorySelectionMode == .new ? .blue : .primary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(categorySelectionMode == .new ? Color.blue.opacity(0.1) : Color(.systemGray6))
-                                    .cornerRadius(8)
-                                }
-                            }
-                            
-                            // Category input based on selection mode
-                            if categorySelectionMode == .existing {
-                                Picker("Select category", selection: $selectedCategory) {
-                                    Text("Select category").tag("")
-                                    ForEach(categories, id: \.name) { cat in
-                                        Text(cat.name).tag(cat.name)
-                                    }
-                                }
-                                .pickerStyle(MenuPickerStyle())
-                                .accessibilityLabel("Select category")
-                            } else {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    TextField("Enter new category name", text: $newCategoryText)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                        .accessibilityLabel("Enter new category name")
-                                    
-                                    HStack {
-                                        Spacer()
-                                        Text("\(newCategoryText.count)/\(maxCategoryCharacters)")
-                                            .font(.caption)
-                                            .foregroundColor(newCategoryText.count > maxCategoryCharacters ? .red : .secondary)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Add button
-                        Button(action: {
-                            addPrompt()
-                        }) {
-                            Text("Add Prompt")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(isAddButtonEnabled ? Color.green : Color.gray)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                        .disabled(!isAddButtonEnabled)
-                        .accessibilityLabel("Add prompt")
-                        
-                        // Validation message
-                        if let message = validationMessage {
-                            Text(message)
-                                .foregroundColor(message == "Prompt added!" ? .green : .red)
-                                .font(.subheadline)
-                        }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(14)
-                    
-                    // Browse prompts section
+                    // Browse prompts section (moved to top)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Browse prompts")
                             .font(.headline)
@@ -174,6 +50,36 @@ struct PromptsView: View {
                             .cornerRadius(12)
                         }
                         .accessibilityLabel("Browse all prompts by category")
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(14)
+                    
+                    // Add a prompt section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Add a prompt")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        Button(action: {
+                            print("[DEBUG] Add a prompt tapped")
+                            showAddPromptModal = true
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 16))
+                                Text("Add a prompt")
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                            }
+                            .padding()
+                            .background(Color.green.opacity(0.1))
+                            .foregroundColor(.green)
+                            .cornerRadius(12)
+                        }
+                        .accessibilityLabel("Add a prompt")
                     }
                     .padding()
                     .background(Color(.systemGray6))
@@ -204,6 +110,13 @@ struct PromptsView: View {
                 }
             )
         }
+        .sheet(isPresented: $showAddPromptModal) {
+            AddPromptModal(
+                onDismiss: {
+                    showAddPromptModal = false
+                }
+            )
+        }
         .alert("Set Selected Prompt", isPresented: $showConfirmationDialog) {
             Button("Yes") {
                 print("[DEBUG] User confirmed prompt selection: \(selectedPromptForConfirmation)")
@@ -221,19 +134,6 @@ struct PromptsView: View {
         }
     }
     
-    // Computed property for add button state
-    private var isAddButtonEnabled: Bool {
-        let trimmedPrompt = newPromptText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedCategory = categorySelectionMode == .existing ? 
-            selectedCategory : 
-            newCategoryText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        return !trimmedPrompt.isEmpty && 
-               !trimmedCategory.isEmpty && 
-               trimmedPrompt.count <= maxPromptCharacters &&
-               (categorySelectionMode == .existing || trimmedCategory.count <= maxCategoryCharacters)
-    }
-    
     // Helper to seed prompts and categories from .md file
     private func seedPromptsIfNeeded() {
         guard !didSeed, allPrompts.isEmpty else { return }
@@ -249,53 +149,6 @@ struct PromptsView: View {
         }
         try? modelContext.save()
         didSeed = true
-    }
-    
-    private func addPrompt() {
-        validationMessage = nil
-        let trimmedPrompt = newPromptText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedCategory = categorySelectionMode == .existing ? 
-            selectedCategory : 
-            newCategoryText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Validation
-        if trimmedPrompt.isEmpty {
-            validationMessage = "Please enter a prompt."
-            return
-        }
-        if trimmedCategory.isEmpty {
-            validationMessage = "Please select or enter a category."
-            return
-        }
-        if trimmedPrompt.count > maxPromptCharacters {
-            validationMessage = "Prompt must be \(maxPromptCharacters) characters or less."
-            return
-        }
-        if categorySelectionMode == .new && trimmedCategory.count > maxCategoryCharacters {
-            validationMessage = "Category must be \(maxCategoryCharacters) characters or less."
-            return
-        }
-        
-        // Add category if new
-        var catToUse: PromptCategory? = categories.first(where: { $0.name == trimmedCategory })
-        if catToUse == nil {
-            let newCat = PromptCategory(name: trimmedCategory)
-            modelContext.insert(newCat)
-            catToUse = newCat
-        }
-        
-        let newPrompt = Prompt(text: trimmedPrompt, category: trimmedCategory, isUserCreated: true, dateAdded: Date())
-        modelContext.insert(newPrompt)
-        try? modelContext.save()
-        
-        // Reset form
-        newPromptText = ""
-        newCategoryText = ""
-        selectedCategory = ""
-        categorySelectionMode = .existing
-        
-        validationMessage = "Prompt added!"
-        print("[DEBUG] Added new prompt: \(trimmedPrompt) in category: \(trimmedCategory)")
     }
     
     private func updateHomeScreenPrompt(_ prompt: String) {
