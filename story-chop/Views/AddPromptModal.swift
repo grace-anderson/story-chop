@@ -38,8 +38,26 @@ struct AddPromptModal: View {
                         
                         // Prompt text field with character counter
                         VStack(alignment: .leading, spacing: 4) {
-                            TextField("Enter your prompt", text: $newPromptText)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            TextEditor(text: $newPromptText)
+                                .frame(minHeight: 80)
+                                .padding(8)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color(.systemGray4), lineWidth: 1)
+                                )
+                                .overlay(
+                                    Group {
+                                        if newPromptText.isEmpty {
+                                            Text("Enter your prompt")
+                                                .foregroundColor(.secondary)
+                                                .padding(.leading, 12)
+                                                .padding(.top, 12)
+                                        }
+                                    }
+                                    , alignment: .topLeading
+                                )
                                 .accessibilityLabel("Enter your prompt")
                             
                             HStack {
@@ -101,8 +119,26 @@ struct AddPromptModal: View {
                                 .accessibilityLabel("Select category")
                             } else {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    TextField("Enter new category name", text: $newCategoryText)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    TextEditor(text: $newCategoryText)
+                                        .frame(minHeight: 60)
+                                        .padding(8)
+                                        .background(Color(.systemBackground))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                        )
+                                        .overlay(
+                                            Group {
+                                                if newCategoryText.isEmpty {
+                                                    Text("Enter new category name")
+                                                        .foregroundColor(.secondary)
+                                                        .padding(.leading, 12)
+                                                        .padding(.top, 12)
+                                                }
+                                            }
+                                            , alignment: .topLeading
+                                        )
                                         .accessibilityLabel("Enter new category name")
                                     
                                     HStack {
