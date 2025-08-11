@@ -12,7 +12,7 @@ struct AddPromptModal: View {
     @State private var selectedCategory: String = ""
     @State private var newCategoryText: String = ""
     @State private var validationMessage: String? = nil
-    @State private var hasSuccessfullyAddedPrompt: Bool = false
+    @State private var showSuccessAlert: Bool = false
     
     // Category selection mode
     @State private var categorySelectionMode: CategorySelectionMode = .existing
@@ -169,7 +169,7 @@ struct AddPromptModal: View {
                         // Validation message
                         if let message = validationMessage {
                             Text(message)
-                                .foregroundColor(message == "Prompt added!" ? .green : .red)
+                                .foregroundColor(.red)
                                 .font(.subheadline)
                         }
                     }
@@ -183,28 +183,31 @@ struct AddPromptModal: View {
             }
             .navigationTitle("Add Prompt")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        print("[DEBUG] AddPromptModal cancelled - discarding changes")
-                        // Reset form and dismiss
-                        resetForm()
-                        onDismiss()
-                    }
-                }
-                
-                if hasSuccessfullyAddedPrompt {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            print("[DEBUG] AddPromptModal done - returning to Prompts")
-                            onDismiss()
+                                    .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button("Cancel") {
+                                    print("[DEBUG] AddPromptModal cancelled - discarding changes")
+                                    // Reset form and dismiss
+                                    resetForm()
+                                    onDismiss()
+                                }
+                            }
                         }
-                    }
-                }
-            }
         }
         .onAppear {
             print("[DEBUG] AddPromptModal appeared")
+        }
+        .alert("Prompt added", isPresented: $showSuccessAlert) {
+            Button("Add another prompt") {
+                print("[DEBUG] User chose to add another prompt")
+                resetForm()
+            }
+            Button("Return to Prompt home") {
+                print("[DEBUG] User chose to return to Prompt home")
+                onDismiss()
+            }
+        } message: {
+            Text("Your prompt has been successfully added. Would you like to add another prompt or return to the main prompts screen?")
         }
     }
     
@@ -261,12 +264,8 @@ struct AddPromptModal: View {
             try modelContext.save()
             print("[DEBUG] Added new prompt: \(trimmedPrompt) in category: \(trimmedCategory)")
             
-            // Show success message and reset form for another prompt
-            validationMessage = "Prompt added!"
-            hasSuccessfullyAddedPrompt = true
-            
-            // Reset form fields but keep the modal open
-            resetFormFields()
+                                    // Show success alert
+                        showSuccessAlert = true
             
         } catch {
             print("[DEBUG] Error saving prompt: \(error)")
@@ -285,7 +284,7 @@ struct AddPromptModal: View {
         print("[DEBUG] Resetting AddPromptModal form")
         resetFormFields()
         validationMessage = nil
-        hasSuccessfullyAddedPrompt = false
+        showSuccessAlert = false
     }
 }
 
