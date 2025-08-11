@@ -31,6 +31,11 @@ struct PromptsView: View {
                             .font(.headline)
                             .fontWeight(.bold)
                         
+                        Text("Explore prompts and choose one you love. Tap it to make it your home page prompt.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.leading)
+                        
                         Button(action: {
                             print("[DEBUG] Browse prompts tapped")
                             showPromptSelectionModal = true
